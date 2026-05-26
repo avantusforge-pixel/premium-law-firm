@@ -1,0 +1,244 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ==================== User & Auth ====================
+
+model User {
+  id        String     @id @default(cuid())
+  email     String     @unique
+  name      String?
+  password  String?
+  role      UserRole   @default(VIEWER)
+  avatar    String?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  sessions  Session[]
+  posts     BlogPost[]
+
+  @@map("users")
+}
+
+enum UserRole {
+  ADMIN
+  EDITOR
+  VIEWER
+}
+
+model Session {
+  id        String    @id @default(cuid())
+  sessionToken String  @unique
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expires   DateTime
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@map("sessions")
+}
+
+// ==================== Blog & Content ====================
+
+model BlogPost {
+  id            String     @id @default(cuid())
+  title         String
+  slug          String     @unique
+  excerpt       String
+  content       String
+  image         String?
+  imageAlt      String?
+  author        User       @relation(fields: [authorId], references: [id])
+  authorId      String
+  category      String
+  tags          String[]
+  published     Boolean    @default(false)
+  featured      Boolean    @default(false)
+  readTime      Int        @default(5)
+  views         Int        @default(0)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  publishedAt   DateTime?
+  comments      Comment[]
+  relatedPosts  RelatedPost[] @relation("post")
+  relatedTo     RelatedPost[] @relation("relatedPost")
+
+  @@index([authorId])
+  @@index([slug])
+  @@index([category])
+  @@index([published])
+  @@map("blog_posts")
+}
+
+model Comment {
+  id        String     @id @default(cuid())
+  content   String
+  author    String
+  email     String
+  approved  Boolean    @default(false)
+  post      BlogPost   @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId    String
+  createdAt DateTime   @default(now())
+
+  @@index([postId])
+  @@map("comments")
+}
+
+model RelatedPost {
+  post          BlogPost @relation("post", fields: [postId], references: [id], onDelete: Cascade)
+  postId        String
+  relatedPost   BlogPost @relation("relatedPost", fields: [relatedPostId], references: [id], onDelete: Cascade)
+  relatedPostId String
+
+  @@id([postId, relatedPostId])
+  @@map("related_posts")
+}
+
+// ==================== Practice Areas ====================
+
+model PracticeArea {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  slug        String   @unique
+  description String
+  icon        String?
+  image       String?
+  content     String
+  seoTitle    String?
+  seoDescription String?
+  faqs        FAQ[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("practice_areas")
+}
+
+model FAQ {
+  id              String   @id @default(cuid())
+  question        String
+  answer          String
+  order           Int      @default(0)
+  practiceArea    PracticeArea @relation(fields: [practiceAreaId], references: [id], onDelete: Cascade)
+  practiceAreaId  String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([practiceAreaId])
+  @@map("faqs")
+}
+
+// ==================== Team ====================
+
+model Attorney {
+  id            String   @id @default(cuid())
+  name          String
+  slug          String   @unique
+  title         String
+  bio           String
+  image         String?
+  email         String?
+  phone         String?
+  specialties   String[]
+  education     String[]
+  certifications String[]
+  experience    String
+  linkedIn      String?
+  order         Int      @default(0)
+  published     Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([slug])
+  @@map("attorneys")
+}
+
+// ==================== Case Results ====================
+
+model CaseResult {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  result      String
+  amount      String?
+  category    String
+  image       String?
+  date        DateTime
+  published   Boolean  @default(true)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category])
+  @@map("case_results")
+}
+
+// ==================== Testimonials ====================
+
+model Testimonial {
+  id        String   @id @default(cuid())
+  author    String
+  title     String?
+  content   String
+  image     String?
+  rating    Int      @default(5)
+  approved  Boolean  @default(false)
+  featured  Boolean  @default(false)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("testimonials")
+}
+
+// ==================== Contact & Inquiries ====================
+
+model ContactInquiry {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  phone     String?
+  subject   String
+  message   String
+  type      InquiryType
+  status    InquiryStatus @default(NEW)
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([type])
+  @@map("contact_inquiries")
+}
+
+enum InquiryType {
+  CONSULTATION
+  GENERAL
+  SUPPORT
+}
+
+enum InquiryStatus {
+  NEW
+  VIEWED
+  RESPONDED
+  CLOSED
+}
+
+// ==================== Settings ====================
+
+model Settings {
+  id              String   @id @default(cuid())
+  key             String   @unique
+  value           String
+  description     String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("settings")
+}
